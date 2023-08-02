@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DB Maintenance</title>
+
+    <!-- update the version number as needed -->
+    <script defer src="/__/firebase/9.17.2/firebase-app-compat.js"></script>
+    <!-- include only the Firebase features as you need -->
+    <script defer src="/__/firebase/9.17.2/firebase-auth-compat.js"></script>
+    <script defer src="/__/firebase/9.17.2/firebase-firestore-compat.js"></script>
+    <script defer src="/__/firebase/9.17.2/firebase-functions-compat.js"></script>
+    <script defer src="/__/firebase/9.17.2/firebase-storage-compat.js"></script>
+    <!-- 
+      initialize the SDK after all desired features are loaded, set useEmulator to false
+      to avoid connecting the SDK to running emulators.
+    -->
+    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+    <script defer src="./js/opencv.js"></script>
+    <script defer src="./js/tesseract.min.js"></script>
+    <script defer src="./js/detection.js"></script>
+    <script defer src="./js/tracking.js"></script>
+    <script defer src="./js/processing.js"></script>
+    <script defer src="./js/main.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <button onclick="loadNewDB()">Load Database from Backup</button>
+      
+
+
+    </div>
+
+    
+    <script>
+      var isReady = false
+
+      document.addEventListener('DOMContentLoaded', async function() {
+        try {
+          let app = firebase.app();
+          let features = [
+            'auth', 
+            'database', 
+            'firestore',
+            'functions',
+            'messaging', 
+            'storage', 
+            'analytics', 
+            'remoteConfig',
+            'performance',
+          ].filter(feature => typeof app[feature] === 'function');
+          
+          isReady = true
+
+          
+
+        } catch (e) {
+          console.error(e);
+        }
+      });
+
+      async function loadNewDB() {
+        var addCard = firebase.functions().httpsCallable('addcardtodb')
+
+        if (!isReady) return
+        let input = document.createElement('input')
+        input.type = 'file'
+        input.onchange = async (e) => {
+          var file = e.target.files[0]
+          if (!file) {
+            return
+          }
+
+          const FPS = 1
+
+          var reader = new FileReader()
+          reader.onload = async function(e) {
+            const cacheDB = JSON.parse(e.target.result)
+            const numCards = cacheDB.length
+            
+            for (var i = 0; i < numCards; i++) {
+              let begin = Date.now()
+              var card = cacheDB[i]
+              console.log("Adding " + card.name)
+              var result = await addCard({card: card})
+              //console.log(result)
+              if (result.data === true) console.log("Success!")
+              let delay = 1000/FPS - (Date.now() - begin)
+              await new Promise(r => setTimeout(r, delay))
+            }
+          }
+          reader.readAsText(file)
+        }
+        input.click()
+
+        
+
+        
+      }
+    </script>
+  </body>
+</html>

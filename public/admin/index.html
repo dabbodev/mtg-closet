@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MTG Scanner admin</title>
+
+    <!-- update the version number as needed -->
+    <script defer src="/__/firebase/9.15.0/firebase-app-compat.js"></script>
+    <!-- include only the Firebase features as you need -->
+    <script defer src="/__/firebase/9.15.0/firebase-auth-compat.js"></script>
+    <script defer src="/__/firebase/9.15.0/firebase-firestore-compat.js"></script>
+    <script defer src="/__/firebase/9.15.0/firebase-functions-compat.js"></script>
+    <!-- 
+      initialize the SDK after all desired features are loaded, set useEmulator to false
+      to avoid connecting the SDK to running emulators.
+    -->
+    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+  </head>
+  <body>
+    <div id="app" >
+      <div id="loading" v-if="loading">Loading</div>
+      <div id="shell" style="display: none">
+        <div id="login" v-if="!authenticated && !loading">
+          <form v-on:submit.prevent="sign_in">
+            <label for="email">Email:</label>
+            <input type="text" v-model="login_email" id="semail" value="Email"> <br/>
+            <label for="spass">Password</label>
+            <input type="password" v-model="login_pass" id="spass"> <br/>
+            <input type="submit"  value="Sign In"> 
+          </form>
+        </div>
+        <div id="main_menu" v-if="authenticated">
+          <button v-on:click="loadNewDB()">Load Database from Backup</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      
+      document.addEventListener('DOMContentLoaded', function() {
+      
+        const fb = firebase.app()
+        const auth = firebase.auth()
+        const functions = firebase.functions()
+        
+        auth.onAuthStateChanged(async (user) => { await v.auth_changed(user) })
+        console.log(auth)
+        var v = new Vue({
+            el: '#app',
+            data: {
+              loading: true,
+              refreshing: false,
+              authenticated: false,
+              
+              login_email: "",
+              login_pass: "",
+              
+            },
+            computed: {
+              
+            },
+            watch: {
+              
+            },
+            methods: {
+              loadNewDB: async () => {
+                var addCard = firebase.functions().httpsCallable('addcardtodb')
+
+                console.log("Beginning DB creation")
+
+                let input = document.createElement('input')
+                input.type = 'file'
+                input.onchange = async (e) => {
+                  var file = e.target.files[0]
+                  if (!file) {
+                    return
+                  }
+
+                  const FPS = 1
+
+                  var reader = new FileReader()
+                  reader.onload = async function(e) {
+                    const cacheDB = JSON.parse(e.target.result)
+                    const numCards = cacheDB.length
+                    
+                    console.log("Loaded " + numCards + " cards from backup")
+
+                    for (var i = 0; i < numCards; i++) {
+                      //let begin = Date.now()
+                      var card = cacheDB[i]
+                      console.log("" + (i+1) + "/" + numCards + ": Adding " + card.name)
+                      var result = await addCard({card: card})
+                      //console.log(result)
+                      if (result.data === true) console.log("Success!")
+                      //let delay = 1000/FPS - (Date.now() - begin)
+                      //await new Promise(r => setTimeout(r, delay))
+                    }
+                  }
+                  reader.readAsText(file)
+                }
+                input.click()
+              },
+              sign_in: async () => {
+                v.loading = true
+                try {
+                  await auth.signInWithEmailAndPassword(v.login_email, v.login_pass)
+                } catch (e) {
+                  var error = e.message.match( /\(([^\)]+)\)/g )[0].slice(1, -1)
+                  console.log("Error: " + error)
+                  if (error == "auth/user-not-found") {
+                    try {
+                      await auth.createUserWithEmailAndPassword(v.login_email, v.login_pass)
+                    } catch (e) {
+                      v.loading = false
+                    }
+                  }
+                }
+                return
+              },
+              sign_out: async () => {
+                await auth.signOut()
+                return
+              },
+              auth_changed: async (user) => {
+                if (user) {
+                  v.authenticated = true
+                } else {
+                  v.authenticated = false
+                }
+                if (v.loading) {
+                    v.loading = false
+                }
+                return
+              },
+              
+            }
+          })
+          document.getElementById("shell").style.display = 'block'
+      })
+    </script>
+  </body>
+</html>

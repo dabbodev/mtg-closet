@@ -7,6 +7,8 @@ yarn-error.log*
 firebase-debug.log*
 firebase-debug.*.log*
 
+mtg-closet-469ffded52e4.json
+
 # Firebase cache
 .firebase/
 
@@ -64,3 +66,4 @@ node_modules/
 
 # dotenv environment variables file
 .env
+scryfall-cache/cards.json
