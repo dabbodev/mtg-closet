@@ -49,7 +49,11 @@ async function startCamera() {
     video.height = videoSettings.height
     video.width = videoSettings.width
     video.srcObject = stream
+    cap = new cv.VideoCapture(video)
     
+
+    canvas.width = video.width
+    canvas.height = video.height
 
     await new Promise(r => setTimeout(r, 5000))
     
@@ -57,9 +61,7 @@ async function startCamera() {
 }
 
 async function onCameraReady() {
-    canvas.width = video.width
-    canvas.height = video.height
-    cap = new cv.VideoCapture(video)
+    
     frame = new cv.Mat(video.height, video.width, cv.CV_8UC4)
     streamStarted = true
 
@@ -74,6 +76,7 @@ async function processVideo() {
         await detector.detectCards(frame)
 
     } catch (err) {
+        //cap.release()
         frame.delete()
         streamStarted = false
         console.log(err)

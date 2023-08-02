@@ -12,14 +12,14 @@ class CardDetector {
     this.frame = frame.clone()
     let filters = await this.runFilters()
 
-    await cv.cvtColor(filters, filters, cv.COLOR_BGR2GRAY)
-
-    cv.Canny(filters, filters, 30, 170, 3, false)
+    let k = cv.Mat.ones(2, 2, cv.CV_8U)
+    await cv.dilate(filters, filters, k)
+  
+    cv.Canny(filters, filters, 30, 170, 3, true)
 
     
 
-    //let k = cv.Mat.ones(5, 5, cv.CV_8U)
-    //await cv.dilate(filters, filters, k)
+    //
 
     let contours = await this.threshContours(filters)
     let hierarchy = new cv.Mat()
@@ -57,10 +57,13 @@ class CardDetector {
         if (this.detectedCards[i].detCount > 0) this.detectedCards[i].detCount = 0
         this.detectedCards[i].lostCount++
         if (this.detectedCards[i].lostCount > 20) {
+          this.detectedCards[i].snap.delete()
+          this.detectedCards[i].titlearea.delete()
           this.detectedCards.splice(i, 1)
         }
       }
     }
+    
 
     cv.imshow('canvasOutput', filters)
     cv.imshow('canvasOutput2', conout)
@@ -71,7 +74,7 @@ class CardDetector {
     conout.delete()
 
     this.frame.delete()
-    return found
+    return //found
   }
 
   async threshContours(img) {
@@ -92,8 +95,8 @@ class CardDetector {
           let rotatedRect = cv.minAreaRect(cnt)
           let ratio = 0
           rotatedRect.size.width < rotatedRect.size.height ? ratio = rotatedRect.size.width / rotatedRect.size.height : ratio = rotatedRect.size.height / rotatedRect.size.width
-
-          if (ratio > 0.59 && ratio < 0.82) {
+          //console.log(ratio)
+          if (ratio > 0.69 && ratio < 0.82) {
             out.push_back(cnt)
           }
         }
@@ -110,9 +113,26 @@ class CardDetector {
     let filters = new cv.Mat()
     
     filters = await this.applyContrast(img, 25)
+    img.delete()
 
-    let ksize = new cv.Size(7, 7)
-    await cv.GaussianBlur(filters, filters, ksize, 2, 2, cv.BORDER_DEFAULT)
+    await cv.addWeighted(filters, 1, filters, 0.30, 0, filters)
+
+    await cv.cvtColor(filters, filters, cv.COLOR_BGR2GRAY)
+    
+    
+
+    filters = await this.applyContrast(filters, 30)
+
+    let ksize = new cv.Size(5, 5)
+    await cv.GaussianBlur(filters, filters, ksize, 2, 1, cv.BORDER_DEFAULT)
+
+    
+
+    await cv.addWeighted(filters, 1, filters, -0.1, 0, filters)
+
+    filters = await this.applyContrast(filters, 30)
+
+    await cv.threshold(filters, filters, 75, 255, cv.THRESH_BINARY_INV)
 
     return filters
   }
