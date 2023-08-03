@@ -9,13 +9,14 @@ class CardDetector {
   }
 
   async detectCards(frame) {
-    this.frame = frame.clone()
+    if (this.frame) this.frame.delete()
+    this.frame = await this.applyContrast(await this.applyBrightness(frame.clone(), brightmod), contmod)
     let filters = await this.runFilters()
 
     let k = cv.Mat.ones(2, 2, cv.CV_8U)
     await cv.dilate(filters, filters, k)
   
-    cv.Canny(filters, filters, 30, 170, 3, true)
+    await cv.Canny(filters, filters, 30, 170, 3, true)
 
     
 
@@ -23,7 +24,7 @@ class CardDetector {
 
     let contours = await this.threshContours(filters)
     let hierarchy = new cv.Mat()
-    let conout = frame.clone()
+    let conout = this.frame.clone()
     let color = new cv.Scalar(255, 0, 255)
 
     let found = contours.size() > 0
@@ -73,7 +74,7 @@ class CardDetector {
     hierarchy.delete()
     conout.delete()
 
-    this.frame.delete()
+    //this.frame.delete()
     return //found
   }
 
@@ -110,10 +111,8 @@ class CardDetector {
   }
 
   async runFilters(img=this.frame.clone()) {
-    let filters = new cv.Mat()
-    
-    filters = await this.applyContrast(img, 25)
-    img.delete()
+    let filters = await this.applyContrast(img, 25)
+    //img.delete()
 
     await cv.addWeighted(filters, 1, filters, 0.30, 0, filters)
 
@@ -141,9 +140,23 @@ class CardDetector {
     let alpha = 131 * (contrast + 127)/(127 * (131 - contrast))
     let gamma = 127*(1 - alpha)
 
-    let result = new cv.Mat()
-    await cv.addWeighted(img, alpha, img, 0, gamma, result)
-    return result
+    await cv.addWeighted(img, alpha, img, 0, gamma, img)
+    return img
   }
+
+  async applyBrightness(img, brightness) {
+    var shadow = brightness
+    var highlight = 255
+    if (brightness < 0) {
+      shadow = 0
+      highlight = 255 + brightness
+    }
+
+    let alpha = (highlight - shadow)/255
+    let gamma = shadow
+
+    await cv.addWeighted(img, alpha, img, 0, gamma, img)
+    return img
+}
   
 }

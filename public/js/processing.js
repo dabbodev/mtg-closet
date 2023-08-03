@@ -11,7 +11,7 @@ class CardProcessor {
     }
 
     async process(sel) {
-        const { data: { text } } = await this.worker.recognize(document.querySelector(sel).toDataURL("image/png"))
+        const { data: { text } } = await this.worker.recognize(await document.querySelector(sel).toDataURL("image/png"))
         console.log(text)
         if (text == "") {
         cardDetected = false
